@@ -15,6 +15,7 @@
 4. `system` 메시지로 AI의 역할 정해 주기
 5. `temperature` 옵션으로 답변의 성격 바꾸기
 6. 응답 안에 들어 있는 정보(토큰 사용량) 꺼내 보기
+7. 공통 설정을 `defaultXxx`로 ChatClient에 미리 넣기
 
 ---
 
@@ -320,6 +321,7 @@ public String gemini(@RequestParam String q) {
 3. 데이터 추출 작업에는 temperature를 높게 할까, 낮게 할까? 왜?
 4. `.content()`와 `.chatResponse()`는 언제 각각 쓸까?
 5. 스타터를 2개 넣었을 때 `ChatClient`를 직접 만들어야 하는 이유는?
+6. `defaultSystem("A")`로 만든 ChatClient에서 요청할 때 `.system("B")`를 쓰면 AI에게 가는 system 메시지는? (실습 5)
 
 <details>
 <summary>정답 보기</summary>
@@ -329,14 +331,108 @@ public String gemini(@RequestParam String q) {
 3. 낮게 한다. 매번 일관되고 정확한 결과가 필요하기 때문이다.
 4. 답변 텍스트만 필요하면 `.content()`, 토큰 사용량 같은 메타데이터도 필요하면 `.chatResponse()`.
 5. `ChatModel` 빈이 2개라 자동 구성이 어느 모델로 `ChatClient.Builder`를 만들지 정할 수 없기 때문이다.
+6. "B"만 간다. 요청 값이 기본값을 합치지 않고 교체한다.
 
 </details>
 
 ---
 
-## 8. 남은 실습
+## 8. 실습 5: 공통 설정을 ChatClient에 미리 넣기 (`defaultXxx`)
 
-- [ ] **실습 5**: `AiClientConfig`에서 `ChatClient.builder(model).defaultSystem("항상 한국어로 답해.").build()`처럼 모든 요청에 공통으로 적용할 설정 넣기
+### 8-1. 왜 필요한가
+
+"항상 한국어로 답해", "temperature는 0.0"처럼 **모든 요청에 똑같이 붙는 설정**을
+엔드포인트마다 `.system()`, `.options()`로 쓰면 중복이 생기고 빠뜨리기도 쉽다.
+이런 설정은 **ChatClient를 만들 때 기본값으로 한 번만** 넣어 둔다.
+
+### 8-2. 코드 (`AiClientConfig`)
+
+```java
+@Bean
+public ChatClient geminiChatClient(GoogleGenAiChatModel googleGenAiChatModel) {
+    return ChatClient.builder(googleGenAiChatModel)
+            .defaultSystem("항상 한국말로 답해")                        // 기본 system 메시지
+            .defaultOptions(ChatOptions.builder().temperature(0.0))   // 기본 옵션
+            .build();
+}
+
+@Bean
+public ChatClient ollamaChatClient(OllamaChatModel ollamaChatModel) {
+    return ChatClient.builder(ollamaChatModel)
+            .defaultSystem("항상 한국말로 답해")
+            .build();
+}
+```
+
+자주 쓰는 `defaultXxx`
+
+| 메서드 | 용도 |
+|---|---|
+| `defaultSystem(...)` | 기본 system 메시지 |
+| `defaultOptions(...)` | 기본 모델 옵션 (temperature 등) |
+| `defaultUser(...)` | 기본 user 메시지 (잘 안 씀) |
+| `defaultAdvisors(...)` | 기본 Advisor (대화 기억, 로깅, RAG 등) → 이후 장에서 다룸 |
+| `defaultTools(...)` | 기본 Tool → **tool** 장에서 다룸 |
+
+### 8-3. 실험 1: 기본값이 적용되는지
+
+`/basic/ollama`는 요청에서 `.system()`을 쓰지 않는다. 그래서 `defaultSystem`이 그대로 적용된다.
+
+```
+http://localhost:8080/basic/ollama?q=Why is the sky blue?
+```
+
+→ 영어로 질문해도 **한국어로 답한다.**
+
+### 8-4. 실험 2: 요청에서 또 지정하면? ⭐ 중요
+
+`/basic/gemini`는 요청 안에서 `.system("너는 초등학생에게 설명하는 선생님이야...")`를 따로 쓴다.
+
+**결론: 기본값과 합쳐지지 않고, 요청 쪽 값으로 "교체"된다.**
+
+Spring AI 2.0.2 소스(`DefaultChatClient`)를 보면 동작이 단순하다.
+
+```java
+// prompt()를 호출하면 기본값(defaultSystem 등)이 복사된 요청 객체가 만들어지고,
+// 요청에서 .system(text)를 호출하면 그 값을 그냥 덮어쓴다.
+public ChatClientRequestSpec system(String text) {
+    this.systemText = text;   // 기존(default) 값을 교체
+    ...
+}
+
+// .options(builder)도 마찬가지로 통째로 교체
+public <B extends ChatOptions.Builder<?>> ChatClientRequestSpec options(B customizer) {
+    this.optionsCustomizer = customizer;
+    ...
+}
+```
+
+```
+defaultSystem("항상 한국말로 답해")
+          │  prompt() 호출 시 복사
+          ▼
+요청 객체 systemText = "항상 한국말로 답해"
+          │  .system("너는 초등학생에게 설명하는 선생님이야...")
+          ▼
+요청 객체 systemText = "너는 초등학생에게 설명하는 선생님이야..."   ← 기본값은 사라짐
+```
+
+→ 그래서 `/basic/gemini`에서는 "항상 한국말로 답해"라는 규칙이 **적용되지 않는다.**
+   (질문이 한국어면 대체로 한국어로 답하겠지만, 그건 규칙 덕분이 아니라 질문 언어를 따라간 것이다.)
+
+### 8-5. 정리
+
+| 상황 | 결과 |
+|---|---|
+| 요청에서 지정 안 함 | `defaultXxx` 값 사용 |
+| 요청에서 `.system()` 지정 | **요청 값으로 교체** (기본값 무시) |
+| 요청에서 `.options()` 지정 | **요청 값으로 교체** (`defaultOptions`에 넣은 값도 무시) |
+
+> 💡 공통 규칙을 반드시 지켜야 한다면, 요청마다 쓰는 system 메시지 안에도 그 규칙을 함께 넣어야 한다.
+> 나중에 **prompt** 장에서 system 템플릿에 변수를 넣는 방식(`defaultSystem` + `.system(s -> s.param(...))`)을 배우면,
+> 기본 문장은 유지하면서 일부만 바꿀 수 있다.
+
+---
 
 ## 9. 다음 단계
 
