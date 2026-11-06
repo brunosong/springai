@@ -1,6 +1,6 @@
 package com.brunosong.springai.basic;
 
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/basic")
 public class BasicController {
@@ -36,6 +37,9 @@ public class BasicController {
 
         // 입력 출력 토큰 수
         Usage usage = chatResponse.getMetadata().getUsage();
+        log.info("[gemini] 토큰 사용량 - 입력: {}, 출력: {}, 전체: {}",
+                usage.getPromptTokens(), usage.getCompletionTokens(), usage.getTotalTokens());
+
         // 답변 텍스트
         String text = chatResponse.getResult().getOutput().getText();
 
