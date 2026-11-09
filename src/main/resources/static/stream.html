@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>Streaming</title></head>
+<body>
+<input id="q" value="블랙홀에 대해 설명해줘" size="40">
+<button onclick="ask()">질문</button>
+<pre id="out" style="white-space: pre-wrap"></pre>
+
+<script>
+    function ask() {
+        const out = document.getElementById('out');
+        out.textContent = '';
+        const q = encodeURIComponent(document.getElementById('q').value);
+        const es = new EventSource('/streaming/chat/usage?q=' + q);
+
+        es.onmessage = e => out.textContent += e.data;  // 청크가 올 때마다 이어 붙이기
+        es.onerror   = () => es.close();               // 스트림이 끝나면 연결 닫기
+    }
+</script>
+</body>
+</html>
