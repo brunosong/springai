@@ -28,6 +28,10 @@ dependencies {
     implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
     implementation 'org.springframework.ai:spring-ai-starter-model-ollama'
 
+    implementation 'org.springframework.ai:spring-ai-vector-store'
+    implementation 'org.springframework.ai:spring-ai-vector-store-advisor'
+    implementation 'org.springframework.ai:spring-ai-rag'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
