@@ -1,1 +1,2 @@
 rootProject.name = 'springai'
+include 'mcp-server'

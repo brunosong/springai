@@ -1,0 +1,18 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: mcp-server
+  ai:
+    mcp:
+      server:
+        name: order-server
+        version: 1.0.0
+        type: SYNC
+        protocol: STREAMABLE
+        instructions: "주문 상태 조회와 환불 정책을 제공하는 서버"
+
+logging:
+  level:
+    io.modelcontextprotocol: DEBUG
