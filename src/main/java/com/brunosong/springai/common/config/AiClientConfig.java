@@ -1,5 +1,7 @@
 package com.brunosong.springai.common.config;
 
+import com.brunosong.springai.advisor.MaskingAdvisor;
+import com.brunosong.springai.advisor.TimingAdvisor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.google.genai.GoogleGenAiChatModel;
@@ -22,6 +24,7 @@ public class AiClientConfig {
     public ChatClient ollamaChatClient(OllamaChatModel ollamaChatModel) {
         return ChatClient.builder(ollamaChatModel)
                 .defaultSystem("항상 한국말로 답해")
+                .defaultAdvisors(new MaskingAdvisor(), new TimingAdvisor())
                 .build();
     }
 }
