@@ -1,7 +1,16 @@
 spring:
   application:
     name: springai
-
+  ai:
+    mcp:
+      client:
+        name: spring-ai-mcp-client
+        type: sync
+        request-timeout: 30s
+        streamable-http:
+          connections:
+            order-server:
+              url: http://localhost:8081
 
 logging:
   level:
