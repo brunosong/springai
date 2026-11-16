@@ -57,8 +57,7 @@ public class WorkflowController {
     private final ChainWorkflow chain;
     private final RoutingWorkflow routing;
     private final ParallelWorkflow parallel;
-
-
+    private final OrchestratorWorkflow orchestrator;
 
     @GetMapping("/chain")
     public Map<String, Object> chain(@RequestParam(required = false) String commits) {
@@ -75,4 +74,20 @@ public class WorkflowController {
                                         @RequestParam(defaultValue = "true") boolean parallel) {
         return this.parallel.run(code != null ? code : SAMPLE_CODE, parallel);
     }
+
+    @GetMapping("/orchestrate")
+    public Map<String, Object> orchestrate(@RequestParam(defaultValue = "Java 가상 스레드") String topic) {
+        return orchestrator.run(topic);
+    }
+
+    private final EvaluatorOptimizerWorkflow evaluatorOptimizer;
+
+    @GetMapping("/evaluate")
+    public Map<String, Object> evaluate(
+            @RequestParam(defaultValue = "문장에서 가장 많이 나온 단어 상위 n개를 빈도순으로 돌려주는 메서드. 대소문자는 구분하지 않고, 구두점은 무시하고, 빈도가 같으면 사전순") String task,
+            @RequestParam(defaultValue = "ollama") String generator,
+            @RequestParam(defaultValue = "ollama") String evaluator) {
+        return evaluatorOptimizer.run(task, generator, evaluator);
+    }
+
 }
