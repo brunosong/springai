@@ -99,6 +99,21 @@ public class WikiController {
         return show(quiz.pick(doc));
     }
 
+    @GetMapping("/grade")
+    public Map<String, Object> grade(@RequestParam String id,
+                                     @RequestParam String answer,
+                                     @RequestParam(defaultValue = "ollama") String model) {
+        WikiQuiz.Grade g = quiz.grade(client(model), id, answer);
+        WikiQuiz.Quiz q = quiz.get(id);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("question", q.question());
+        result.put("verdict", g.verdict());
+        result.put("feedback", g.feedback());
+        result.put("missing", g.missing());
+        result.put("modelAnswer", q.answer());       // 채점이 끝났으니 정답 공개
+        return result;
+    }
+
     /** 답에 단 출처가 실제로 읽은 절인지 코드로 확인 */
     private static final Pattern CITATION = Pattern.compile("\\[\\[(.+?)]]\\s*>\\s*(.+)");
 

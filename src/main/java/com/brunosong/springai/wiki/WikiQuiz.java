@@ -18,6 +18,11 @@ import java.util.concurrent.ThreadLocalRandom;
 @Slf4j
 public class WikiQuiz {
 
+    public enum Verdict { CORRECT, PARTIAL, WRONG }
+
+    /** 채점 결과 (첫 번째 버전) */
+    public record Grade(Verdict verdict, String feedback, List<String> missing) {}
+
     /** 문제 하나. answer 는 채점 기준(정답) — 사용자에게는 보여주지 않는다 */
     public record Quiz(String id, String doc, String question, String answer, String source) {}
 
@@ -81,6 +86,32 @@ public class WikiQuiz {
         log.info("[quiz] 생성: {}", g.question());
         return save(new Quiz(null, doc, g.question(), g.answer(), "LLM 생성 (" + section + ")"));
     }
+
+    /** 사용자 답을 정답과 비교해 채점한다 */
+    public Grade grade(ChatClient client, String quizId, String userAnswer) {
+        Quiz q = issued.get(quizId);
+        if (q == null) throw new IllegalArgumentException("없는 문제 id : " + quizId);
+
+        return client.prompt().system(
+                        """
+                                너는 공정한 채점자다. 모범 답안을 기준으로 학습자의 답을 채점한다.
+                                - CORRECT : 모범 답안의 핵심을 모두 말했다 (표현이 달라도 뜻이 같으면 맞다)
+                                - PARTIAL : 핵심 일부만 말했다
+                                - WRONG : 핵심을 틀렸거나 말하지 않는다
+                                - feedback : 학습자에게 하는 말 2문장. 잘한 점 1개, 보안할 점 1개
+                                - missing : 학습자가 빠뜨린 핵심 (없으면 빈 목록)
+                                """)
+                .user("""
+                        [문제] %s
+                        [모범 답안] %s
+                        [학습자의 답] %s
+                        """.formatted(q.question(), q.answer(), userAnswer))
+                .advisors(StructuredOutputValidationAdvisor.builder()
+                        .outputType(Grade.class).maxRepeatAttempts(2).build())
+                .call().entity(Grade.class);
+    }
+
+
 
     public Quiz get(String quizId) {
         return issued.get(quizId);
