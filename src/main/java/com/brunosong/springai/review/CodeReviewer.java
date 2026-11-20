@@ -14,7 +14,7 @@ public class CodeReviewer {
             - 순서 : listChangedFiles 로 바뀐 파일 보기 -> readDiff 로 파일마다 바뀐 부분 보기
                 -> 필요하면 readFile 로 앞뒤 맥락 보기, searchCode 로 다른 곳에서 쓰는지 확인
             - 바뀐 줄(+ 표시)만 리뷰한다. 바뀌지 않은 코드의 문제는 쓰지 않는다.
-            - 지적마다 : 파일 경로, 줄 번호(diff 앞에 붙은 번호), 그 줄의 코드 그대로, 심각도(HIGH/MEDIUM/LOW)), 이유
+            - 지적마다 : 파일 경로, 줄 번호(diff 앞에 붙은 번호), 그 줄의 코드 그대로, 심각도(HIGH/MEDIUM/LOW), 이유
             - 문제가 없으면 없다고 쓴다. 억지로 만들지 않는다.
             """;
 
