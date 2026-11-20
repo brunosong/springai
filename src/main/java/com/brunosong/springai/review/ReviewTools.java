@@ -54,11 +54,11 @@ public class ReviewTools {
     // ========== 도구 ① 바뀐 파일 목록 ==========
 
     @Tool(description = "이번 리뷰 범위에서 바뀐 파일 목록과 추가/삭제 줄 수를 보여준다. 리뷰는 이 도구로 시작한다.")
-    public String listChangeFiles() {
+    public String listChangedFiles() {
         log.info("[tool] listChangedFiles()");
 
         List<String> files = changedFiles();
-        if (files.isEmpty()) return range() + " 범위에 바귄 파일이 없다.";
+        if (files.isEmpty()) return range() + " 범위에 바뀐 파일이 없다.";
 
         StringBuilder sb = new StringBuilder("바뀐 파일 (" + files.size() + "개, 범위 " + range() + ")\n");
         for (String line : git("diff", "--numstat", range()).strip().split("\n")) {
@@ -140,7 +140,7 @@ public class ReviewTools {
     String git(String... args) {
         Result run = run(args);
         if (run.exit() != 0) {
-            throw new IllegalStateException("git " + String.join("", args) + " 실패: " + run.out());
+            throw new IllegalStateException("git " + String.join(" ", args) + " 실패: " + run.out());
         }
         return run.out();
     }
