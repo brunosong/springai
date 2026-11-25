@@ -10,12 +10,12 @@ spring:
       # 키는 application-local.yml(깃 제외)에 두고, bootRun 이 local 프로필을 켜서 덮어쓴다.
       # 그 프로필 없이 띄우면 GEMINI_API_KEY 환경변수가 있어야 한다(없으면 기동 실패).
       api-key: ${GEMINI_API_KEY}
-      base-url: https://generativelanguage.googleapis.com
+      # Spring AI 2.0 은 OpenAI 공식 SDK 를 쓴다. SDK 가 base-url 뒤에 /chat/completions 를 붙이므로
+      # 경로는 base-url 에 포함한다 (1.x 의 completions-path 는 없어졌다).
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
       chat:
-        completions-path: /v1beta/openai/chat/completions
-        options:
-          model: gemini-3.6-flash
-          temperature: 0.7
+        model: gemini-3.6-flash
+        temperature: 0.7
 
 twin:
   # 세션별 대화 기록 JSON 이 쌓이는 디렉터리

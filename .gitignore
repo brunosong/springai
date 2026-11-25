@@ -38,3 +38,8 @@ out/
 
 ### Local config (secrets) ###
 application-local.yaml
+application-local.yml
+
+### digital-twin 개인 자료 ###
+digital-twin/src/main/resources/data/*.pdf
+twin-memory/

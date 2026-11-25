@@ -1,9 +1,10 @@
 package com.brunosong.system.digitaltwin.chat;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -33,8 +34,8 @@ public class ConversationStore {
         try {
             return objectMapper.readValue(file.toFile(), new TypeReference<>() {
             });
-        } catch (IOException e) {
-            throw new UncheckedIOException("대화 기록을 읽을 수 없습니다: " + file, e);
+        } catch (JacksonException e) {
+            throw new IllegalStateException("대화 기록을 읽을 수 없습니다: " + file, e);
         }
     }
 
@@ -43,7 +44,9 @@ public class ConversationStore {
             Files.createDirectories(memoryDir);
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(pathOf(sessionId).toFile(), messages);
         } catch (IOException e) {
-            throw new UncheckedIOException("대화 기록을 저장할 수 없습니다: " + sessionId, e);
+            throw new UncheckedIOException("대화 기록 폴더를 만들 수 없습니다: " + memoryDir, e);
+        } catch (JacksonException e) {
+            throw new IllegalStateException("대화 기록을 저장할 수 없습니다: " + sessionId, e);
         }
     }
 

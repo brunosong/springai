@@ -1,14 +1,14 @@
 package com.brunosong.system.digitaltwin.persona;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class PersonaResourcesTest {
 
-    private final PersonaResources resources = new PersonaResources(new ObjectMapper());
+    private final PersonaResources resources = new PersonaResources(JsonMapper.builder().build());
 
     @Test
     void facts_json_에서_이름을_읽는다() {

@@ -1,5 +1,28 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.2'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.brunosong'
+version = '0.0.1-SNAPSHOT'
+description = 'Digital twin chat (persona prompt + conversation memory)'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    set('springAiVersion', "2.0.2")
+}
+
 dependencies {
-    implementation platform('org.springframework.ai:spring-ai-bom:1.0.0')
     // Gemini 는 OpenAI 호환 엔드포인트(generativelanguage.googleapis.com/v1beta/openai)를 제공한다.
     // Vertex AI 스타터는 GCP 프로젝트/ADC 자격증명이 필요하지만, 이쪽은 API 키 하나로 끝난다.
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
@@ -8,10 +31,18 @@ dependencies {
     implementation 'org.apache.pdfbox:pdfbox:3.0.4'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-tasks.named('bootJar') { enabled = true }
-tasks.named('jar') { enabled = false }
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
 
 // 로컬 실행은 application-local.yml 에서 API 키를 읽는다.
 // 배포용 jar 는 이 프로필 없이 GEMINI_API_KEY 환경변수를 쓴다.

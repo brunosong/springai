@@ -1,12 +1,13 @@
 package com.brunosong.system.digitaltwin.persona;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,7 +67,7 @@ public class PersonaResources {
         try {
             return objectMapper.readValue(facts, new TypeReference<>() {
             });
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("data/facts.json 을 읽을 수 없습니다", e);
         }
     }
