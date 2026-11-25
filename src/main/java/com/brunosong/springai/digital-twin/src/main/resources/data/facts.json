@@ -1,0 +1,21 @@
+{
+  "full_name": "송호식",
+  "name": "브루노 송",
+  "current_role": "백엔드 개발자",
+  "location": "서울",
+  "email": "brunosong@example.com",
+  "linkedin": "linkedin.com/in/yourprofile",
+  "specialties": [
+    "자바 백엔드",
+    "DevOps",
+    "아키텍처"
+  ],
+  "years_experience": 10,
+  "education": [
+    {
+      "degree": "학사",
+      "institution": "서울디지털대학교",
+      "year": "2020"
+    }
+  ]
+}

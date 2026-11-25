@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="|${name} 디지털 트윈|">디지털 트윈</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; }
+        #log { border: 1px solid #ddd; border-radius: 8px; padding: 12px; height: 420px; overflow-y: auto; background: #fafafa; }
+        .me   { color: #1565c0; margin: 6px 0; white-space: pre-wrap; }
+        .bot  { color: #2e7d32; margin: 6px 0; white-space: pre-wrap; }
+        .sys  { color: #888;    margin: 6px 0; font-size: 12px; }
+        #row { display: flex; gap: 8px; margin-top: 12px; }
+        #msg { flex: 1; padding: 10px; font-size: 14px; }
+        button { padding: 10px 16px; }
+    </style>
+</head>
+<body>
+    <h2 th:text="|🧑‍💻 ${fullName} 디지털 트윈|">디지털 트윈</h2>
+    <p class="sys">예: "어떤 기술 스택을 주로 쓰시나요?"</p>
+    <div id="log"></div>
+    <div id="row">
+        <input id="msg" placeholder="궁금한 것을 물어보세요..." />
+        <button onclick="send()">보내기</button>
+    </div>
+
+<script>
+    const log = document.getElementById('log');
+    const msg = document.getElementById('msg');
+    let sessionId = null;
+
+    function append(cls, text) {
+        const div = document.createElement('div');
+        div.className = cls;
+        div.textContent = text;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+        return div;
+    }
+
+    async function send() {
+        const text = msg.value.trim();
+        if (!text) return;
+        msg.value = '';
+        append('me', '나: ' + text);
+        const pending = append('sys', '답변 생성 중...');
+
+        try {
+            const r = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text, session_id: sessionId })
+            });
+            if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+            const data = await r.json();
+            sessionId = data.session_id;
+            pending.remove();
+            append('bot', '트윈: ' + data.response);
+        } catch (e) {
+            pending.remove();
+            append('sys', '오류: ' + e.message);
+        }
+    }
+
+    msg.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+</script>
+</body>
+</html>

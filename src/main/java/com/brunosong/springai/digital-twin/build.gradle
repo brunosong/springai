@@ -1,0 +1,20 @@
+dependencies {
+    implementation platform('org.springframework.ai:spring-ai-bom:1.0.0')
+    // Gemini 는 OpenAI 호환 엔드포인트(generativelanguage.googleapis.com/v1beta/openai)를 제공한다.
+    // Vertex AI 스타터는 GCP 프로젝트/ADC 자격증명이 필요하지만, 이쪽은 API 키 하나로 끝난다.
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.apache.pdfbox:pdfbox:3.0.4'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('bootJar') { enabled = true }
+tasks.named('jar') { enabled = false }
+
+// 로컬 실행은 application-local.yml 에서 API 키를 읽는다.
+// 배포용 jar 는 이 프로필 없이 GEMINI_API_KEY 환경변수를 쓴다.
+tasks.named('bootRun') {
+    systemProperty 'spring.profiles.active', 'local'
+}
