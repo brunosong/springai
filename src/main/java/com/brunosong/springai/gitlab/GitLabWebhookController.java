@@ -67,6 +67,7 @@ public class GitLabWebhookController {
         // 검사 3. 같은 MR@커밋이 이미 큐에 있으면 또 넣지 않는다
         String key = body.key();
         if (!inFlight.add(key)) {
+            log.info("[webhook] 건너뜀: 이미 큐에 있다 ({})", key);
             return ignored("이미 큐에 있다");
         }
 

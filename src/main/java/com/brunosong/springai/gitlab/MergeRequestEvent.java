@@ -2,7 +2,6 @@ package com.brunosong.springai.gitlab;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -17,10 +16,8 @@ import java.util.Set;
  *   "object_attributes": {
  *     "iid": 2, "title": "할인 계산과 사용자별 주문 수",
  *     "state": "opened", "action": "update", "draft": false,
- *     "oldrev": "47cf443c…",
  *     "last_commit": { "id": "85540632…" }
- *   },
- *   "changes": {}
+ *   }
  * }
  * </pre>
  */
@@ -28,8 +25,7 @@ public record MergeRequestEvent(
         @JsonProperty("object_kind") String objectKind,
         User user,
         Project project,
-        @JsonProperty("object_attributes") Attributes attributes,
-        Map<String, Change> changes) {          // update 일 때 바뀐 칸: 이전 값 → 지금 값
+        @JsonProperty("object_attributes") Attributes attributes) {
 
     // ========== 본문의 칸들 ==========
 
@@ -43,12 +39,9 @@ public record MergeRequestEvent(
             String state,                               // opened, closed, merged
             String action,                              // open, reopen, update, close, merge, approved ...
             boolean draft,
-            String oldrev,                              // update 일 때 "새 커밋이 올라왔으면" 이전 head. 제목만 바꾸면 없다
             @JsonProperty("last_commit") Commit lastCommit) {}
 
     public record Commit(String id) {}
-
-    public record Change(Object previous, Object current) {}
 
     // ========== 리뷰할지 거르기 ==========
 
@@ -57,7 +50,11 @@ public record MergeRequestEvent(
 
     /**
      * 리뷰할 이벤트인지 판단한다. 리뷰하지 않을 거면 그 이유, 리뷰할 거면 null.
-     * LLM 을 부르기 전에 코드로 거른다 — 모델 호출은 돈과 시간이다.
+     * 웹훅 본문만으로 확실히 아는 것만 여기서 거른다 (LLM 0번).
+     *
+     * "새 커밋이 있나"는 여기서 판단하지 않는다. update 웹훅의 oldrev 는 push 때만 들어 있고,
+     * Draft → Ready 나 "닫힌 동안 push → Reopen" 처럼 새 head 를 리뷰해야 하는데 oldrev 가 없는 경우가 있다.
+     * 그래서 update 는 모두 큐에 넣고, "이 커밋을 이미 리뷰했나"는 MrReviewBot 이 MR 댓글의 표시로 가린다.
      */
     public String skipReason() {
         if (!"merge_request".equals(objectKind) || attributes == null || project == null) {
@@ -69,27 +66,10 @@ public record MergeRequestEvent(
         if (!REVIEW_ACTIONS.contains(attributes.action())) {
             return "리뷰할 동작이 아니다 (" + attributes.action() + ")";
         }
-        if (isEditWithoutNewCommit()) {
-            return "새 커밋 없는 수정이다 (제목·설명·라벨 변경)";
-        }
         if (attributes.draft()) {
             return "Draft MR 이다";
         }
         return null;
-    }
-
-    /** update 인데 새 커밋도 없고 Draft 해제도 아니다 = 제목·설명·라벨만 바꿨다 */
-    private boolean isEditWithoutNewCommit() {
-        boolean newCommits = attributes.oldrev() != null;
-        return "update".equals(attributes.action()) && !newCommits && !becameReady();
-    }
-
-    /** Draft 를 풀었나 (Draft → Ready). 커밋은 그대로지만 이때 처음 리뷰해야 한다 */
-    boolean becameReady() {
-        Change draft = changes == null ? null : changes.get("draft");
-        return draft != null
-                && Boolean.TRUE.equals(draft.previous())
-                && Boolean.FALSE.equals(draft.current());
     }
 
     // ========== 같은 이벤트 가르기 ==========
