@@ -7,6 +7,9 @@ spring:
         name: spring-ai-mcp-client
         type: sync
         request-timeout: 30s
+        # 앱이 뜰 때 MCP 서버에 접속하지 않는다. MCP 서버가 꺼져 있어도 앱은 뜨고,
+        # MCP 기능을 처음 쓸 때 접속한다 (그때 서버가 없으면 그 요청만 실패한다).
+        initialized: false
         streamable-http:
           connections:
             order-server:
