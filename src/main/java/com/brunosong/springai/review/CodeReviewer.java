@@ -62,8 +62,9 @@ public class CodeReviewer {
                 .entity(FindingChecker.Report.class);
         if (report.findings() == null) return List.of();
         // 모델이 칸을 비워 두는 경우가 있어 기본값을 채운다 (정렬·합치기에서 null 이면 터진다)
+        // line 이 없으면 0 → FindingChecker 가 NOT_FOUND 로 버린다 (줄 댓글을 달 곳이 없다)
         return report.findings().stream()
-                .map(f -> new FindingChecker.Finding(f.file(), f.line(), f.code(),
+                .map(f -> new FindingChecker.Finding(f.file(), f.line() == null ? 0 : f.line(), f.code(),
                         f.severity() == null ? FindingChecker.Severity.LOW : f.severity(),
                         f.category() == null ? "기타" : f.category(),
                         f.message()))

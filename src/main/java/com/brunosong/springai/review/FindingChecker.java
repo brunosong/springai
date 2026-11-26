@@ -15,7 +15,13 @@ public class FindingChecker {
     public record Finding(String file, int line, String code, Severity severity, String category, String message) {}
 
     /** 모델이 채우는 보고서 */
-    public record Report(List<Finding> findings) {}
+    public record Report(List<Draft> findings) {}
+
+    /**
+     * 모델이 채우는 지적 하나. 모델은 칸을 null 로 낼 때가 있다 (지운 줄을 지적할 때 line: null 등).
+     * int 로 받으면 Jackson 3 이 실패하므로 Integer 로 받고, CodeReviewer.toFindings() 에서 Finding 으로 옮긴다.
+     */
+    public record Draft(String file, Integer line, String code, Severity severity, String category, String message) {}
 
     /** 검증 결과를 붙인 지적 */
     public record Checked(Finding finding, Status status, String note) {}
