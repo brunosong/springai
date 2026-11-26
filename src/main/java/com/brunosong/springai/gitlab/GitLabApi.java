@@ -10,6 +10,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,9 +34,11 @@ public class GitLabApi {
             long iid,
             String title,
             String state,                                       // opened, closed, merged
+            @JsonProperty("source_branch") String sourceBranch, // 커밋 상태의 ref
             @JsonProperty("target_branch") String targetBranch,
             @JsonProperty("web_url") String webUrl,
-            @JsonProperty("diff_refs") DiffRefs diffRefs) {}
+            @JsonProperty("diff_refs") DiffRefs diffRefs,
+            @JsonProperty("head_pipeline") Pipeline headPipeline) {}   // ← 추가: 없으면 null
 
     /** MR 의 세 커밋. 줄 댓글을 달 때 세 개 다 필요하다 */
     public record DiffRefs(
@@ -43,9 +46,13 @@ public class GitLabApi {
             @JsonProperty("start_sha") String startSha,        // 지금 target 브랜치 끝
             @JsonProperty("head_sha") String headSha) {}       // MR 의 마지막 커밋
 
-    /** MR 에 달린 댓글 하나. system 은 "커밋을 추가했다" 같은 GitLab 자동 기록 */
-    public record Note(long id, String body, boolean system) {}
+    /** 파이프라인. sha 는 이 파이프라인이 돈 커밋 */
+    public record Pipeline(long id, String sha, String status) {}     // ← 추가
 
+    /** MR 에 달린 댓글 하나. system 은 "커밋을 추가했다" 같은 GitLab 자동 기록 */
+    public record Note(long id, String body, boolean system,
+                       boolean resolvable,          // ← 추가: 줄 댓글(토론)이면 true
+                       Boolean resolved) {}         // ← 추가: 사람이 Resolve 를 눌렀나. 줄 댓글이 아니면 GitLab 이 칸을 안 보낸다 → null
     // ========== 준비 ==========
 
     private final RestClient http;
@@ -130,5 +137,32 @@ public class GitLabApi {
                 "old_path", file,
                 "new_path", file,
                 "new_line", newLine);
+    }
+
+    /**
+     * MR head 커밋에 커밋 상태 "ai-review" 를 단다. failed 면 파이프라인이 실패가 된다.
+     * head 파이프라인(CI)이 있으면 거기에 붙인다 — 따로 만들면 CI 파이프라인이 성공해서 머지가 열린다.
+     */
+    public void commitStatus(long projectId, MergeRequest mr, String state, String description) {
+        String head = mr.diffRefs().headSha();
+        Map<String, Object> body = new HashMap<>();
+        body.put("name", "ai-review");
+        body.put("state", state);                     // running, success, failed
+        body.put("description", description);         // 잡 옆에 보이는 한 줄
+        body.put("target_url", mr.webUrl());          // 잡을 누르면 갈 곳
+        body.put("ref", mr.sourceBranch());
+        // push 직후에는 head_pipeline 이 아직 옛 커밋의 파이프라인일 때가 있다 → head 커밋 것일 때만 붙인다
+        if (mr.headPipeline() != null && head.equals(mr.headPipeline().sha())) {
+            body.put("pipeline_id", mr.headPipeline().id());
+        }
+        try {
+            http.post()
+                    .uri("/projects/{id}/statuses/{sha}", projectId, head)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            log.warn("[gitlab] 커밋 상태 실패 {} → {} {}", state, e.getStatusCode(), e.getResponseBodyAsString());
+        }
     }
 }

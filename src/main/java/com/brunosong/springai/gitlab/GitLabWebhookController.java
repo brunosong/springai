@@ -19,6 +19,7 @@ import java.util.concurrent.Executors;
  * GitLab 웹훅을 받아 리뷰를 큐에 넣는다.
  *   POST /gitlab/webhook : GitLab 이 부른다. 검사 3개를 거쳐 큐에 넣고 바로 답한다
  *   GET  /gitlab/review  : 사람이 손으로 돌려 본다 (기본 dry-run)
+ *   POST /gitlab/judge   : 사람이 Resolve 한 뒤 머지 판정을 다시 한다 (15-1)
  */
 @Slf4j
 @RestController
@@ -125,6 +126,13 @@ public class GitLabWebhookController {
     public MrReviewBot.Result review(@RequestParam long project, @RequestParam long mr,
                                      @RequestParam(defaultValue = "true") boolean dryRun) {
         return bot.review(project, mr, dryRun);
+    }
+
+    /** 사람이 Resolve 한 뒤 다시 판정. Resolve 는 웹훅이 오지 않아서 손으로 부른다 */
+    @PostMapping("/judge")
+    public Map<String, Object> judge(@RequestParam long project, @RequestParam long mr) {
+        String head = api.mergeRequest(project, mr).diffRefs().headSha();
+        return Map.of("openHigh", bot.judge(project, mr, head));
     }
 
     @PreDestroy

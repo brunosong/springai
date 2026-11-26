@@ -99,8 +99,10 @@ public class MrReviewBot {
 
         List<String> existing = api.notes(projectId, iid).stream().map(GitLabApi.Note::body).toList();
         if (!dryRun && containsMarker(existing, summaryMarker(head))) {
+            judge(projectId, iid, head);       // (가) 리뷰는 건너뛰어도 판정은 다시 한다
             return Result.skipped(name, "이 커밋(" + shortSha(head) + ")은 이미 리뷰했다");
         }
+        if (!dryRun) api.commitStatus(projectId, mr, "running", "AI 리뷰 중");   // (나) 리뷰 끝날 때까지 머지 막기
         Path repo = mirror.fetch(api.project(projectId), mr);
 
         // ② 리뷰 — 14장 /review/report 와 같은 세 줄. 범위만 "MR 의 base..head" 로 바뀌었다
@@ -131,6 +133,9 @@ public class MrReviewBot {
         long ms = System.currentTimeMillis() - start;
         String summary = summary(head, posted, t, tools.viewed().size(), ms);
         if (!dryRun) api.comment(projectId, iid, summary);
+
+        // ⑤ 판정 — 해결 안 된 HIGH 줄 댓글이 있으면 머지를 막는다
+        if (!dryRun) judge(projectId, iid, head);          // ← (다) 추가
 
         log.info("[bot] {} 리뷰 끝: 줄 댓글 {}, 요약 {}, LOW {}, 버림 {} ({}ms)",
                 name, posted, t.summary.size(), t.low, t.dropped, ms);
@@ -286,5 +291,32 @@ public class MrReviewBot {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    // ========== ⑤ 판정 — 머지 막기 ==========
+
+    /**
+     * 봇이 단 HIGH 줄 댓글 중 아직 Resolve 안 된 것을 세서 커밋 상태를 단다. 센 개수를 돌려준다.
+     * 리뷰 결과가 아니라 GitLab 에 남은 댓글로 판정한다 → 사람이 Resolve 하면 다음 판정에서 풀린다.
+     */
+    public long judge(long projectId, long iid, String head) {
+        GitLabApi.MergeRequest now = api.mergeRequest(projectId, iid);
+        if (!head.equals(now.diffRefs().headSha())) return -1;    // 그사이 새 커밋 → 그 커밋의 리뷰가 판정한다
+
+        long open = api.notes(projectId, iid).stream().filter(MrReviewBot::isOpenHigh).count();
+        if (open > 0) {
+            api.commitStatus(projectId, now, "failed", "해결 안 된 HIGH " + open + "개");
+        } else {
+            api.commitStatus(projectId, now, "success", "해결 안 된 HIGH 없음");
+        }
+        log.info("[bot] {}!{} 판정: 해결 안 된 HIGH {}개", projectId, iid, open);
+        return open;
+    }
+
+    /** 봇이 단(표시가 있는) HIGH 줄 댓글인데 아직 Resolve 안 된 것 */
+    static boolean isOpenHigh(GitLabApi.Note n) {
+        return n.resolvable() && !Boolean.TRUE.equals(n.resolved())
+                && n.body().startsWith("**[HIGH")          // lineComment() 가 이렇게 시작한다
+                && n.body().contains("<!-- ai-review:");   // 사람이 쓴 댓글이 아니라 봇 댓글
     }
 }
